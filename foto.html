@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Foto del visitante</title>
+<style>
+  body{font-family:Arial,sans-serif;text-align:center;margin:20px}
+  video{width:100%;max-width:520px;border-radius:8px;background:#000}
+  button{font-size:18px;padding:12px 28px;margin-top:12px;border:0;border-radius:6px;background:#2f5fe0;color:#fff;cursor:pointer}
+  button:disabled{background:#999}
+  #m{margin-top:14px;font-size:16px}
+</style>
+</head>
+<body>
+<h2>Foto fondo blanco</h2>
+<video id="v" autoplay playsinline muted></video><br>
+<button id="b" disabled>Tomar foto</button>
+<p id="m">Activando la cámara...</p>
+<canvas id="c" hidden></canvas>
+<script>
+const URL_SCRIPT = 'https://script.google.com/macros/s/AKfycbwbsbn_tJEXkHmS7esB3iIg_rvh6Zf7xN-YC4Iw5XEF5OUrSBsurCL7BlQxnY8Jf0a2/exec';
+const id = new URLSearchParams(location.search).get('id');
+const v = document.getElementById('v');
+const b = document.getElementById('b');
+const m = document.getElementById('m');
+const c = document.getElementById('c');
+
+if (!id) {
+  m.textContent = 'Falta el ID de la visita. Abre esta página desde el botón de la app.';
+} else {
+  navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } } })
+    .then(s => { v.srcObject = s; b.disabled = false; m.textContent = 'Cámara lista.'; })
+    .catch(() => { m.textContent = 'No se pudo abrir la cámara. Revisa el permiso en el candado de la barra de direcciones.'; });
+}
+
+b.onclick = async () => {
+  b.disabled = true;
+  m.textContent = 'Guardando...';
+  c.width = v.videoWidth;
+  c.height = v.videoHeight;
+  c.getContext('2d').drawImage(v, 0, 0);
+  try {
+    await fetch(URL_SCRIPT, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ id: id, img: c.toDataURL('image/jpeg', 0.85) })
+    });
+    m.textContent = 'Foto guardada. Ya puedes cerrar esta pestaña y sincronizar la app.';
+    v.srcObject.getTracks().forEach(t => t.stop());
+  } catch (e) {
+    m.textContent = 'Error al enviar. Intenta de nuevo.';
+    b.disabled = false;
+  }
+};
+</script>
+</body>
+</html>
